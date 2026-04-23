@@ -11,3 +11,7 @@ __pycache__/
 output/*.html
 output/*.json
 output/*.csv
+
+# Pyvis 자동 생성 파일 및 폴더
+lib/
+output/

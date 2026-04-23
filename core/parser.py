@@ -18,7 +18,8 @@ class SQLParser:
 
             for table_expr in expression.find_all(exp.Table):
                 # Full Path: LAKE_CATALOG.MDM.LOT_HIST
-                full_path = table_expr.sql(identify=False).upper()
+                # full_path = table_expr.sql(identify=False).upper()
+                full_path = table_expr.sql(identify=False).split(' AS ')[0].upper()
 
                 # 중복 방지
                 if full_path not in seen_full_paths:

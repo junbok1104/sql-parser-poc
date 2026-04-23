@@ -1,10 +1,11 @@
 import json
 from datetime import datetime
 from sqlalchemy import text
+
+from core.analyzer import SQLAnalyzer
 from core.parser import SQLParser
 from core.sessionizer import Sessionizer
 from database.connection import engine
-
 
 def save_parsed_logs(results):
     """분석된 로그를 lake_public.sql_query_status 테이블에 저장 (SQL 2.4)"""
@@ -70,6 +71,28 @@ def run_pipeline():
 
     return final_results # 결과 리턴
 
+def run_analysis():
+    analyzer = SQLAnalyzer()
+
+    # 1. DB에서 데이터 가져오기
+    meta_list = analyzer.fetch_parsed_data()
+    print(f"📊 분석 대상 데이터: {len(meta_list)}건")
+
+    # 2. 그래프 데이터 생성
+    graph_data = analyzer.generate_graph_data(meta_list)
+
+    print("\n--- 분석 결과 (Nodes) ---")
+    for node in graph_data['nodes']:
+        print(f"📍 {node['label']} ({node['id']})")
+
+    print("\n--- 분석 결과 (Edges) ---")
+    for edge in graph_data['edges']:
+        print(f"🔗 {edge['from']} <-> {edge['to']} (Join 횟수: {edge['value']})")
+
+    # 시각화
+    analyzer.visualize_lineage(graph_data)
+
 if __name__ == "__main__":
-    results = run_pipeline()
-    save_parsed_logs(results)
+    # results = run_pipeline()
+    # save_parsed_logs(results)
+    run_analysis()
