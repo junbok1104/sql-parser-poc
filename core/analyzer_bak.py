@@ -106,6 +106,7 @@ class SQLAnalyzer:
 
         return {"nodes": formatted_nodes, "edges": formatted_edges}
 
+
     def visualize_lineage(self, graph_data, output_filename="output/lineage_map.html"):
         """분석된 데이터를 바탕으로 HTML 시각화 파일을 생성합니다."""
         # 디렉토리가 없으면 생성
