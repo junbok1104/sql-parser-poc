@@ -142,25 +142,68 @@ class SQLAnalyzer:
         for p, count in sorted(edges.items(), key=lambda x: x[1], reverse=True):
             print(f"🔗 {p[0].split('.')[-1]} <-> {p[1].split('.')[-1]} (Join: {count}회)")
 
-    def visualize_lineage(self, graph_data, output_filename="output/lineage_map.html"):
+    def visualize_lineage(self, data_input, output_filename="output/lineage_map.html"):
         """분석된 데이터를 바탕으로 HTML 시각화 파일을 생성합니다."""
-        # 디렉토리가 없으면 생성
+        # 1. 입력 데이터 타입 체크 및 변환
+        # 리스트(Meta List)가 들어오면 그래프 데이터로 변환하고,
+        # 이미 변환된 딕셔너리가 들어오면 그대로 사용합니다.
+        if isinstance(data_input, list):
+            print(f"📊 {len(data_input)}건의 메타데이터를 그래프 데이터로 변환 중...")
+            graph_data = self.generate_graph_data(data_input)
+        else:
+            graph_data = data_input
+
+        # 2. 디렉토리가 없으면 생성
         os.makedirs(os.path.dirname(output_filename), exist_ok=True)
 
-        # 네트워크 객체 생성 (배경색, 폰트 등 설정)
+        # 3. 네트워크 객체 생성 (배경색, 폰트 등 설정)
+        # Pyvis 라이브러리 사용
         net = Network(height="750px", width="100%", bgcolor="#222222", font_color="white", notebook=False)
 
-        # 1. 노드 추가
-        for node in graph_data['nodes']:
-            net.add_node(node['id'], label=node['label'], title=node['id'], color="#4285F4")
+        # 4. 노드 추가
+        if 'nodes' in graph_data:
+            for node in graph_data['nodes']:
+                # 기존 설정값(size, color 등)이 있으면 반영, 없으면 기본값 사용
+                net.add_node(
+                    node['id'],
+                    label=node['label'],
+                    title=node.get('title', node['id']),
+                    color=node.get('color', "#4285F4"),
+                    size=node.get('size', 20)
+                )
 
-        # 2. 엣지 추가 (value가 굵기가 됩니다)
-        for edge in graph_data['edges']:
-            net.add_edge(edge['from'], edge['to'], value=edge['value'], title=f"Join Count: {edge['value']}", color="#FBBC05")
+        # 5. 엣지 추가
+        if 'edges' in graph_data:
+            for edge in graph_data['edges']:
+                net.add_edge(
+                    edge['from'],
+                    edge['to'],
+                    value=edge.get('value', 1),
+                    title=edge.get('title', f"Join Count: {edge.get('value', 1)}"),
+                    label=edge.get('label', ""), # 엣지에 라벨(ON 조건) 추가
+                    color="#FBBC05"
+                )
 
-        # 물리 엔진 설정 (노드들이 예쁘게 퍼지도록)
+        # 6. 물리 엔진 및 옵션 설정
         net.toggle_physics(True)
+        # 노드 간 간격을 좀 더 벌리고 싶을 때 사용하는 옵션 (선택사항)
+        net.set_options("""
+        var options = {
+          "physics": {
+            "forceAtlas2Based": {
+              "gravitationalConstant": -50,
+              "centralGravity": 0.01,
+              "springLength": 100,
+              "springConstant": 0.08
+            },
+            "maxVelocity": 50,
+            "solver": "forceAtlas2Based",
+            "timestep": 0.35,
+            "stabilization": { "iterations": 150 }
+          }
+        }
+        """)
 
-        # 파일 저장
+        # 7. 파일 저장
         net.save_graph(output_filename)
         print(f"🎨 시각화 완료: {output_filename} 확인")

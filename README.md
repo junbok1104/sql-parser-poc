@@ -90,17 +90,23 @@ ORDER BY A.AVG_VALUE DESC;
 4. 사내 UDF 해석: 특화된 사용자 정의 함수의 함수명 식별 및 가중치 부여 기능 미흡
 
 ## 6. 실행 방법
-***환경 구축***
-```sql
-poetry install
-```
+### 사전 준비
+- Python 3.10 이상 버전이 설치되어 있어야 합니다.
+- Poetry가 설치되어 있지 않다면 설치해 주세요:`pip install poetry`
 
-***분석 실행***
-```sql
-poetry run python main.py
-```
+### 환경 구축
+1. 저장소를 클론합니다:
+   ```bash
+   git clone [https://github.com/junbok1104/sql-parser-poc.git](https://github.com/junbok1104/sql-parser-poc.git)
+   cd sql-parser-poc
 
-
-
-
+2. 의존성 라이브러리를 설치합니다:
+    ```bash
+    poetry install
+    ```
+   
+3. 분석 실행
+    ```bash
+   poetry run python main.py
+   ```
 
