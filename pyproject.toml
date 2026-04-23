@@ -1,0 +1,18 @@
+[project]
+name = "sql-parser-module"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "LeeJunbok",email = "bock1104@gmail.com"}
+]
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "sqlglot (>=30.6.0,<31.0.0)",
+    "pyvis (>=0.3.2,<0.4.0)",
+    "networkx (>=3.6.1,<4.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
