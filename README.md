@@ -1,4 +1,10 @@
+# 1단계: 초기 모델 (Full Mesh / Query Scope) 
+### 기준: "같은 쿼리 안에 등장하면 무조건 관계
 <img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/001702ab-1a36-4083-bc55-48d388e42b8e" />
+
+# 3단계: 현재 모델 (Semantic / Explicit Mapping)
+### 기준: 파서가 확정한 Alias Map을 조회(Lookup)하여 연결
+<img width="300" height="300" alt="image" src="images/img.png" />
 
 
 # 🚀 SQL Parser POC (Lineage & Metadata Extractor)

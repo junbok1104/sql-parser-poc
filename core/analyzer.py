@@ -57,9 +57,6 @@ class SQLAnalyzer:
         }
 
     def generate_graph_data(self, meta_list):
-        import re
-        from collections import Counter
-
         nodes = {}  # {full_path: {"label": short_name, "count": 0}}
         edges = Counter()  # {(source, target): weight}
         edge_labels = {}   # {pair: condition}
