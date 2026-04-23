@@ -35,16 +35,19 @@ class SQLParser:
             # 3. 조인 조건 추출
             joins = []
             for join in expression.find_all(exp.Join):
-                # Join 대상 테이블도 Full Path와 Short Name 추출
+                # 1. Join 대상 테이블 경로 추출
                 j_full = join.this.sql(identify=False).upper().split(' ')[0]
                 j_short = j_full.split('.')[-1]
 
-                on_condition = join.args.get('on').sql() if join.args.get('on') else ""
+                # 2. ON 조건 추출 (별칭을 지우지 마세요!)
+                # self._clean_alias를 거치지 않고 원본 sql을 가져오거나,
+                # 단순히 대문자 변환만 수행합니다.
+                on_condition = join.args.get('on').sql(identify=False).upper() if join.args.get('on') else ""
 
                 joins.append({
                     "full_path": j_full,
                     "short_name": j_short,
-                    "on": self._clean_alias(on_condition)
+                    "on": on_condition  # <--- 별칭(A., B.)이 살아있는 상태
                 })
 
             # 4. SELECT 절 컬럼 추출 (interests 지표)
@@ -72,9 +75,19 @@ class SQLParser:
                 ])
             aggregations = list(set(aggregations))
 
+            # 7. Alias Map 추출
+            # {"MD": "LAKE_CATALOG.MDM.MEASUREMENT_DATA", "RD": "RECENT_LOTS"}
+            alias_map = {}
+            for table in expression.find_all(exp.Table):
+                f_path = table.sql(identify=False).split(' AS ')[0].upper()
+                alias = table.alias.upper() if table.alias else None
+                if alias:
+                    alias_map[alias] = f_path
+
             return {
                 "tables": table_info,
                 "joins": joins,
+                "alias_map": alias_map,
                 "interests": interests,        # SELECT 컬럼
                 "hotFilters": hot_filters,     # WHERE 조건
                 "aggregations": aggregations   # GROUP/ORDER BY 컬럼
@@ -87,3 +100,13 @@ class SQLParser:
     def _clean_alias(self, condition):
         if not condition: return ""
         return self.alias_pattern.sub('', condition).upper()
+
+    def extract_alias_map(expression):
+        alias_map = {}
+        # 쿼리 내 모든 Table 노드를 찾아서 별칭이 있는지 확인
+        for table in expression.find_all(exp.Table):
+            table_full_path = table.sql() # 전체 경로
+            alias = table.alias
+            if alias:
+                alias_map[alias] = table_full_path
+        return alias_map
