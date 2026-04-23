@@ -47,13 +47,42 @@ class SQLParser:
                     "on": self._clean_alias(on_condition)
                 })
 
+            # 4. SELECT 절 컬럼 추출 (interests 지표)
+            # column.find_ancestor(exp.Select)를 쓰면 더 정확하게 SELECT 소속인지 파악 가능합니다.
+            interests = list(set([
+                col.sql(identify=False).upper()
+                for col in expression.find_all(exp.Column)
+                if col.find_ancestor(exp.Select) and not col.find_ancestor(exp.Where)
+            ]))
+
+            # 5. WHERE 절 컬럼 + 리터럴 값 추출 (hotFilters)
+            hot_filters = []
+            for condition in expression.find_all(exp.Binary): # =, <, >, != 등
+                if condition.find_ancestor(exp.Where):
+                    left = condition.left.sql(identify=False).upper()
+                    right = condition.right.sql(identify=False) # 값은 대문자 변환 없이
+                    hot_filters.append(f"{left} {condition.key} {right}")
+
+            # 6. GROUP / ORDER BY 추출 (alsoUsedIn: ['AGG'])
+            aggregations = []
+            for agg in expression.find_all(exp.Group, exp.Order):
+                aggregations.extend([
+                    node.sql(identify=False).upper()
+                    for node in agg.find_all(exp.Column)
+                ])
+            aggregations = list(set(aggregations))
+
             return {
-                "tables": table_info, # 리스트 내 딕셔너리 구조
-                "joins": joins
+                "tables": table_info,
+                "joins": joins,
+                "interests": interests,        # SELECT 컬럼
+                "hotFilters": hot_filters,     # WHERE 조건
+                "aggregations": aggregations   # GROUP/ORDER BY 컬럼
             }
         except Exception as e:
             print(f"❌ 파싱 에러: {e}")
             return None
+
 
     def _clean_alias(self, condition):
         if not condition: return ""
