@@ -98,7 +98,10 @@ ORDER BY A.AVG_VALUE DESC;
 1. 저장소를 클론합니다:
    ```bash
    git clone [https://github.com/junbok1104/sql-parser-poc.git](https://github.com/junbok1104/sql-parser-poc.git)
+   ```
+   ```bash
    cd sql-parser-poc
+   ```
 
 2. 의존성 라이브러리를 설치합니다:
     ```bash
