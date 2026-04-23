@@ -1,4 +1,4 @@
-<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/001702ab-1a36-4083-bc55-48d388e42b8e" />
+<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/001702ab-1a36-4083-bc55-48d388e42b8e" />
 
 
 # 🚀 SQL Parser POC (Lineage & Metadata Extractor)
