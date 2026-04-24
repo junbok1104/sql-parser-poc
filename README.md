@@ -2,9 +2,14 @@
 ### 기준: "같은 쿼리 안에 등장하면 무조건 관계
 <img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/001702ab-1a36-4083-bc55-48d388e42b8e" />
 
-# 2단계: 현재 모델 (Semantic / Explicit Mapping)
+# 2단계: 2번째 모델 (Semantic / Explicit Mapping)
 ### 기준: 파서가 확정한 Alias Map을 조회(Lookup)하여 연결
 <img width="300" height="300" alt="image" src="images/img.png" />
+
+# 3단계: 3번째 모델 (Contextual Insight & Structural Mapping)
+### 기준: 조인 조건(ON Clause)의 의미 분석 및 통계적 메타데이터 결합
+<img width="300" height="300" alt="image" src="images/img_ver3.png" />
+
 
 
 # 🚀 SQL Parser POC (Lineage & Metadata Extractor)

@@ -1,3 +1,4 @@
+import math
 import os
 import re
 from collections import Counter
@@ -56,77 +57,96 @@ class SQLAnalyzer:
             "top_columns": column_counts.most_common(10)
         }
 
+    def extract_join_key(self, on_condition):
+        """'LH.LOT_ID = MD.LOT_ID' -> 'LOT_ID' 추출 로직"""
+        if not on_condition: return ""
+        # 등호나 AND/OR 기준으로 분리
+        parts = re.split(r'=|AND|OR', on_condition.upper())
+        for p in parts:
+            # 별칭(A.) 제거하고 순수 컬럼명만 추출
+            clean = p.split('.')[-1].strip()
+            if clean and not clean.isnumeric(): # 숫자가 아닌 첫 번째 단어를 키로 간주
+                return clean
+        return ""
+
     def generate_graph_data(self, meta_list):
-        nodes = {}  # {full_path: {"label": short_name, "count": 0}}
-        edges = Counter()  # {(source, target): weight}
-        edge_labels = {}   # {pair: condition}
+        nodes = {}
+        edges = {}  # {(src, dst): {"count": 0, "key": ""}}
 
         for meta in meta_list:
             tables = meta.get('tables', [])
             joins = meta.get('joins', [])
-            # [핵심] 파서가 제공하는 정확한 별칭 맵 (예: {"MD": "LAKE_CATALOG.MDM.MEASUREMENT_DATA"})
             alias_map = meta.get('alias_map', {})
 
-            # 1. 노드 정보 및 참조 횟수 수집
+            # 1. 노드 정보 수집 (물리/가상 구분 및 로그 스케일 크기)
             for t in tables:
                 f_path = t['full_path']
                 if f_path not in nodes:
-                    nodes[f_path] = {"label": t['short_name'], "count": 0}
+                    nodes[f_path] = {"label": t['short_name'], "count": 0, "full_path": f_path}
                 nodes[f_path]["count"] += 1
 
-            # 2. JOIN 파트너 결정
+            # 2. 정확한 JOIN 파트너 및 조인 키 추출
             for j in joins:
                 target_table = j.get('full_path')
                 condition = j.get('on', '')
                 source_table = None
 
-                # [Step 1] ON 조건에서 별칭 추출 (예: "MD.ID = RD.ID" -> ["MD", "RD"])
+                # ON 조건에서 별칭 추출 및 파트너 식별
                 found_aliases = re.findall(r'(\w+)\.', condition)
-
-                # [Step 2] 추출된 별칭 중 target_table이 아닌 '상대방' 테이블 찾기
                 for alias in found_aliases:
-                    actual_path = alias_map.get(alias)
-                    # 별칭이 가리키는 실제 경로가 존재하고, 그게 현재 JOIN 대상이 아니라면 그놈이 source다!
+                    actual_path = alias_map.get(alias.upper())
                     if actual_path and actual_path != target_table:
                         source_table = actual_path
                         break
 
-                # [Step 3] Alias로 못 찾았을 경우의 Fallback (여전히 필요)
                 if not source_table and tables:
                     source_table = tables[0]['full_path']
 
-                # [Step 4] 엣지 확정
                 if source_table and target_table and source_table != target_table:
                     pair = tuple(sorted([source_table, target_table]))
-                    edges[pair] += 1
-                    edge_labels[pair] = condition
+                    join_key = self.extract_join_key(condition)
 
-        # 3. 시각화 데이터 포맷팅
-        formatted_nodes = []
-        for f_path, info in nodes.items():
-            size = 15 + (info['count'] * 3)
-            # 참조가 많은 핵심 테이블은 색상을 다르게
-            color = "#1A73E8" if info['count'] > 10 else "#8AB4F8"
-            formatted_nodes.append({
-                "id": f_path,
-                "label": info['label'],
-                "size": size,
-                "color": color,
-                "title": f"Path: {f_path}\nTotal References: {info['count']}"
-            })
+                    if pair not in edges:
+                        edges[pair] = {"count": 0, "key": join_key, "raw_on": condition}
+                    edges[pair]["count"] += 1
 
-        formatted_edges = [
-            {
-                "from": p[0],
-                "to": p[1],
-                "value": count,
-                "title": f"Condition: {edge_labels.get(p, '')}\nTotal Joins: {count}",
-                "label": edge_labels.get(p, '') if count > 2 else "" # 빈도가 높은 조인만 라벨 노출
-            }
-            for p, count in edges.items()
-        ]
+            # 3. 시각화 데이터 포맷팅 (레퍼런스 스타일 적용)
+            formatted_nodes = []
+            for f_path, info in nodes.items():
+                is_physical = "." in f_path
+                # 로그 스케일로 크기 균형 조정
+                size = 15 + (math.log(info['count'] + 1) * 8)
 
-        # 4. 분석 결과 리포팅 (터미널)
+                formatted_nodes.append({
+                    "id": f_path,
+                    "label": info['label'], # HTML 라벨 지원
+                    "size": size,
+                    "shape": "box" if is_physical else "ellipse", # 물리 테이블은 박스형
+                    "color": {
+                        "background": "#FFFFFF",
+                        "border": "#1A73E8" if is_physical else "#9aa0a6",
+                        "highlight": "#E8F0FE"
+                    },
+                    "font": {"multi": "html", "size": 14},
+                    "title": f"Path: {f_path}\nReferences: {info['count']}"
+                })
+
+            formatted_edges = []
+            for p, data in edges.items():
+                # 선 위에 "조인키 (횟수)" 표시 -> 레퍼런스 이미지 스타일
+                label_text = f"{data['key']}\n({data['count']}회)" if data['key'] else f"JOIN\n({data['count']}회)"
+
+                formatted_edges.append({
+                    "from": p[0],
+                    "to": p[1],
+                    "value": data['count'], # 빈도에 따른 선 굵기
+                    "label": label_text,
+                    "title": f"Condition: {data['raw_on']}\nTotal: {data['count']} times",
+                    "color": {"color": "#1A73E8", "opacity": 0.5},
+                    "font": {"size": 10, "align": "middle", "background": "#ffffff"}
+                })
+
+        # 4. 분석 결과 리포팅
         self._print_analysis_report(nodes, edges, len(meta_list))
 
         return {"nodes": formatted_nodes, "edges": formatted_edges}
@@ -134,76 +154,77 @@ class SQLAnalyzer:
     def _print_analysis_report(self, nodes, edges, total_count):
         """분석 결과를 터미널에 깔끔하게 출력합니다."""
         print(f"\n📊 분석 대상 데이터: {total_count}건")
+
         print("\n--- 분석 결과 (Nodes: 인기도 순) ---")
+        # 노드는 info['count'] 기준으로 정렬
         for f_path, info in sorted(nodes.items(), key=lambda x: x[1]['count'], reverse=True):
             print(f"📍 {info['label']} (참조: {info['count']}회)")
 
         print("\n--- 분석 결과 (Edges: 결합도 순) ---")
-        for p, count in sorted(edges.items(), key=lambda x: x[1], reverse=True):
-            print(f"🔗 {p[0].split('.')[-1]} <-> {p[1].split('.')[-1]} (Join: {count}회)")
+        # [수정 포인트] x[1]이 딕셔너리이므로 x[1]['count']를 기준으로 정렬해야 에러가 안 납니다.
+        for p, data in sorted(edges.items(), key=lambda x: x[1]['count'], reverse=True):
+            # p는 (source, target) 튜플입니다.
+            src_short = p[0].split('.')[-1]
+            dst_short = p[1].split('.')[-1]
+            print(f"🔗 {src_short} <-> {dst_short} (Join: {data['count']}회, Key: {data['key']})")
 
     def visualize_lineage(self, data_input, output_filename="output/lineage_map.html"):
-        """분석된 데이터를 바탕으로 HTML 시각화 파일을 생성합니다."""
-        # 1. 입력 데이터 타입 체크 및 변환
-        # 리스트(Meta List)가 들어오면 그래프 데이터로 변환하고,
-        # 이미 변환된 딕셔너리가 들어오면 그대로 사용합니다.
         if isinstance(data_input, list):
-            print(f"📊 {len(data_input)}건의 메타데이터를 그래프 데이터로 변환 중...")
             graph_data = self.generate_graph_data(data_input)
         else:
             graph_data = data_input
 
-        # 2. 디렉토리가 없으면 생성
         os.makedirs(os.path.dirname(output_filename), exist_ok=True)
 
-        # 3. 네트워크 객체 생성 (배경색, 폰트 등 설정)
-        # Pyvis 라이브러리 사용
-        net = Network(height="750px", width="100%", bgcolor="#222222", font_color="white", notebook=False)
+        # 1. 밝은 테마로 설정 (레퍼런스 이미지 스타일)
+        net = Network(height="850px", width="100%", bgcolor="#ffffff", font_color="#333333", notebook=False)
 
-        # 4. 노드 추가
+        # 2. 노드 추가 (font multi 옵션 필수!)
         if 'nodes' in graph_data:
             for node in graph_data['nodes']:
-                # 기존 설정값(size, color 등)이 있으면 반영, 없으면 기본값 사용
                 net.add_node(
                     node['id'],
-                    label=node['label'],
-                    title=node.get('title', node['id']),
-                    color=node.get('color', "#4285F4"),
-                    size=node.get('size', 20)
+                    label=node['label'], # 이제 순수 텍스트만 들어감
+                    title=node.get('title', ""),
+                    color=node.get('color', "#1A73E8"),
+                    size=node.get('size', 20),
+                    shape="box",
+                    # font 설정을 태그 없이 굵고 깔끔하게 지정
+                    font={
+                        "size": 15,
+                        "face": "Arial Black", # 폰트 자체를 굵은 녀석으로 지정하는 게 가장 확실합니다.
+                        "color": "#333333"
+                    }
                 )
 
-        # 5. 엣지 추가
+        # 3. 엣지 추가
         if 'edges' in graph_data:
             for edge in graph_data['edges']:
                 net.add_edge(
                     edge['from'],
                     edge['to'],
                     value=edge.get('value', 1),
-                    title=edge.get('title', f"Join Count: {edge.get('value', 1)}"),
-                    label=edge.get('label', ""), # 엣지에 라벨(ON 조건) 추가
-                    color="#FBBC05"
+                    label=edge.get('label', ""),
+                    title=edge.get('title', ""),
+                    color={"color": "#1A73E8", "opacity": 0.3}, # 선을 연하게 해서 글자가 잘 보이게
+                    font={"size": 11, "align": "middle", "background": "rgba(255, 255, 255, 0.7)", "strokeWidth": 0}
                 )
 
-        # 6. 물리 엔진 및 옵션 설정
-        net.toggle_physics(True)
-        # 노드 간 간격을 좀 더 벌리고 싶을 때 사용하는 옵션 (선택사항)
+        # 4. 물리 엔진 최적화 (서로 너무 겹치지 않게 거리 조정)
         net.set_options("""
-        var options = {
-          "physics": {
-            "forceAtlas2Based": {
-              "gravitationalConstant": -50,
-              "centralGravity": 0.01,
-              "springLength": 100,
-              "springConstant": 0.08
-            },
-            "maxVelocity": 50,
-            "solver": "forceAtlas2Based",
-            "timestep": 0.35,
-            "stabilization": { "iterations": 150 }
-          }
-        }
+            var options = {
+              "physics": {
+                "forceAtlas2Based": {
+                  "gravitationalConstant": -200,
+                  "centralGravity": 0.01,
+                  "springLength": 250,
+                  "springConstant": 0.08
+                },
+                "solver": "forceAtlas2Based",
+                "stabilization": { "iterations": 150 }
+              }
+            }
         """)
 
-        # 7. 파일 저장
         net.save_graph(output_filename)
         print(f"🎨 시각화 완료: {output_filename} 확인")

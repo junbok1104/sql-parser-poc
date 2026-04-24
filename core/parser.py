@@ -4,13 +4,42 @@ import re
 
 class SQLParser:
     def __init__(self):
-        # 별칭 제거용 정규식 (lh.ID -> ID)
-        self.alias_pattern = re.compile(r'\b\w+\.')
+        # 시나리오별 우선순위 방언 리스트
+        # 1. Databricks/Spark (LAKE_CATALOG 대응)
+        # 2. Oracle (바인드 변수 :1 대응)
+        # 3. Postgres/MySQL (표준 및 일반 SQL)
+        # 4. None (표준 SQL)
+        self.dialects = ["databricks", "oracle", "postgres", "mysql", None]
+
+    def _parse_with_fallback(self, sql):
+        """전처리를 포함하여 다양한 방언으로 파싱 시도"""
+        if not sql: return None
+
+        # 1. 전처리: :1, :2 패턴을 파서가 인식하기 쉬운 형태로 임시 치환
+        # (일부 방언에서 콜론+숫자를 문법 에러로 처리하는 것 방지)
+        processed_sql = re.sub(r':(\d+)', r'__BIND_\1', sql)
+
+        # 2. 방언 루프 실행
+        for dialect in self.dialects:
+            try:
+                # 시도할 때 전처리된 SQL과 원본 SQL 두 번 시도하면 더 안전합니다.
+                for s in [processed_sql, sql]:
+                    try:
+                        return sqlglot.parse_one(s, read=dialect)
+                    except:
+                        continue
+            except Exception:
+                continue
+
+        return None
 
     def parse_query(self, sql):
         try:
-            # 1. SQL 파싱 (다양한 방언 대응을 위해 필요시 dialect 설정 가능)
-            expression = sqlglot.parse_one(sql)
+            # 1. SQL 파싱 - 다중 방언 시도 (에러 발생 시 None 반환)
+            expression = self._parse_with_fallback(sql)
+
+            if not expression:
+                raise ValueError("모든 지원 방언으로 파싱에 실패했습니다.")
 
             # 2. 테이블 정보 추출 (Full Path와 Short Name 병행)
             table_info = []
