@@ -282,67 +282,67 @@ def run_parsed_data_test(parsed_list):
 if __name__ == "__main__":
     # results = run_pipeline()
     # save_parsed_logs(results)
-    run_analysis()
+    # run_analysis()
 
-    # DB가 없는 사용자를 위해 즉시 시각화 가능한 데이터 세트
-    # parsed_sample_data = [
-    #     # 1. 가장 복잡한 메인 분석 쿼리 (CTE + Join + Subquery)
-    #     {
-    #         "joins": [{"on": "A.PROD_CODE = B.PROD_CODE", "full_path": "LAKE_CATALOG.MDM.MDM_LFB_PROD_M", "short_name": "MDM_LFB_PROD_M"}, {"on": "RD.LOT_ID = MD.LOT_ID", "full_path": "LAKE_CATALOG.MDM.MEASUREMENT_DATA", "short_name": "MEASUREMENT_DATA"}],
-    #         "tables": [{"full_path": "STATS_DATA", "short_name": "STATS_DATA"}, {"full_path": "LAKE_CATALOG.MDM.MDM_LFB_PROD_M", "short_name": "MDM_LFB_PROD_M"}, {"full_path": "LAKE_CATALOG.MDM.ALARM_HIST", "short_name": "ALARM_HIST"}, {"full_path": "LAKE_CATALOG.MDM.LOT_HIST", "short_name": "LOT_HIST"}, {"full_path": "RECENT_LOTS", "short_name": "RECENT_LOTS"}, {"full_path": "LAKE_CATALOG.MDM.MEASUREMENT_DATA", "short_name": "MEASUREMENT_DATA"}],
-    #         "alias_map": {"A": "STATS_DATA", "B": "LAKE_CATALOG.MDM.MDM_LFB_PROD_M", "LH": "LAKE_CATALOG.MDM.LOT_HIST", "MD": "LAKE_CATALOG.MDM.MEASUREMENT_DATA", "RD": "RECENT_LOTS"},
-    #         "interests": ["LH.LOT_ID", "RD.STATION_ID", "A.AVG_VALUE", "MD.LOT_ID", "LH.STATION_ID", "B.PROD_CODE", "LH.PROD_CODE", "MD.MEASURE_ID", "A.STATION_ID", "LH.CREATE_DT", "A.PROD_CODE", "MD.VALUE", "RD.PROD_CODE", "RD.LOT_ID", "B.PROD_NAME"],
-    #         "hotFilters": ["A.MEASURE_CNT gt 10", "PROD_CODE eq A.PROD_CODE", "LH.CREATE_DT >= :START_DATE and LH.STATUS IN ('COMPLETED', 'SHIPPED')", "LH.CREATE_DT gte :start_date", "MD.VALUE is NULL"],
-    #         "aggregations": ["MD.VALUE", "RD.PROD_CODE", "RD.STATION_ID", "A.AVG_VALUE"]
-    #     },
-    #     # 2. 기본 조인 (LH <-> MD)
-    #     {
-    #         "joins": [{"on": "LH.LOT_ID = MD.LOT_ID", "full_path": "LAKE_CATALOG.MDM.MEASUREMENT_DATA", "short_name": "MEASUREMENT_DATA"}],
-    #         "tables": [{"full_path": "LAKE_CATALOG.MDM.LOT_HIST", "short_name": "LOT_HIST"}, {"full_path": "LAKE_CATALOG.MDM.MEASUREMENT_DATA", "short_name": "MEASUREMENT_DATA"}],
-    #         "alias_map": {"LH": "LAKE_CATALOG.MDM.LOT_HIST", "MD": "LAKE_CATALOG.MDM.MEASUREMENT_DATA"},
-    #         "interests": ["LH.LOT_ID", "MD.LOT_ID"], "hotFilters": [], "aggregations": []
-    #     },
-    #     # 3. 단일 테이블 조회 (Filter 테스트)
-    #     {
-    #         "joins": [], "tables": [{"full_path": "LAKE_CATALOG.MDM.LOT_HIST", "short_name": "LOT_HIST"}],
-    #         "alias_map": {}, "interests": [], "hotFilters": ["LOT_ID eq 'L12345'"], "aggregations": []
-    #     },
-    #     # 4. 마스터 데이터 조인 (A <-> B)
-    #     {
-    #         "joins": [{"on": "A.PROD_ID = B.PROD_ID", "full_path": "LAKE_CATALOG.MDM.MDM_LFB_PRODFLOW_W", "short_name": "MDM_LFB_PRODFLOW_W"}],
-    #         "tables": [{"full_path": "LAKE_CATALOG.MDM.MDM_LFB_PROD_M", "short_name": "MDM_LFB_PROD_M"}, {"full_path": "LAKE_CATALOG.MDM.MDM_LFB_PRODFLOW_W", "short_name": "MDM_LFB_PRODFLOW_W"}],
-    #         "alias_map": {"A": "LAKE_CATALOG.MDM.MDM_LFB_PROD_M", "B": "LAKE_CATALOG.MDM.MDM_LFB_PRODFLOW_W"},
-    #         "interests": ["B.PROD_ID", "A.PROD_ID"], "hotFilters": [], "aggregations": []
-    #     },
-    #     # 5. 복합 조건절 테스트
-    #     {
-    #         "joins": [], "tables": [{"full_path": "LAKE_CATALOG.MDM.LOT_HIST", "short_name": "LOT_HIST"}],
-    #         "alias_map": {}, "interests": [], "hotFilters": ["CREATE_DT BETWEEN :START_DT AND :END_DT or STATUS IS NULL", "STATUS is NULL"], "aggregations": []
-    #     },
-    #     # 6. WITH절 (CTE) 가상 테이블 테스트
-    #     {
-    #         "joins": [], "tables": [{"full_path": "TEMP_VIEW", "short_name": "TEMP_VIEW"}, {"full_path": "LAKE_CATALOG.MDM.LOT_HIST", "short_name": "LOT_HIST"}],
-    #         "alias_map": {}, "interests": ["LOT_ID"], "hotFilters": [], "aggregations": []
-    #     },
-    #     # 7. UNION ALL (다중 테이블 추출)
-    #     {
-    #         "joins": [], "tables": [{"full_path": "LAKE_CATALOG.MDM.MDM_LFB_PROD_M", "short_name": "MDM_LFB_PROD_M"}, {"full_path": "LAKE_CATALOG.MDM.MDM_LFB_PRODFLOW_W", "short_name": "MDM_LFB_PRODFLOW_W"}],
-    #         "alias_map": {}, "interests": ["PROD_ID"], "hotFilters": [], "aggregations": []
-    #     },
-    #     # 8. 서브쿼리 내 필터 테스트
-    #     {
-    #         "joins": [], "tables": [{"full_path": "LAKE_CATALOG.MDM.MEASUREMENT_DATA", "short_name": "MEASUREMENT_DATA"}],
-    #         "alias_map": {}, "interests": ["VALUE", "LOT_ID"], "hotFilters": ["A.VALUE gt 10"], "aggregations": []
-    #     },
-    #     # 9. 사용자 정의 함수/주석 포함 쿼리
-    #     {
-    #         "joins": [], "tables": [{"full_path": "LAKE_CATALOG.MDM.LOT_HIST", "short_name": "LOT_HIST"}],
-    #         "alias_map": {}, "interests": ["LOT_ID"], "hotFilters": ["STATUS eq 'A'"], "aggregations": []
-    #     },
-    #     # 10. 복합 UNION ALL 마스터 정보
-    #     {
-    #         "joins": [], "tables": [{"full_path": "LAKE_CATALOG.MDM.MDM_LFB_PROD_M", "short_name": "MDM_LFB_PROD_M"}, {"full_path": "LAKE_CATALOG.MDM.MDM_LFB_PRODFLOW_W", "short_name": "MDM_LFB_PRODFLOW_W"}],
-    #         "alias_map": {}, "interests": ["PROD_ID", "FLOW_NAME", "PROD_NAME"], "hotFilters": ["STATUS eq 'A'", "USE_YN eq 'Y'"], "aggregations": []
-    #     }
-    # ]
-    # run_parsed_data_test(parsed_sample_data)
+    #DB가 없는 사용자를 위해 즉시 시각화 가능한 데이터 세트
+    parsed_sample_data = [
+        # 1. 가장 복잡한 메인 분석 쿼리 (CTE + Join + Subquery)
+        {
+            "joins": [{"on": "A.PROD_CODE = B.PROD_CODE", "full_path": "LAKE_CATALOG.MDM.MDM_LFB_PROD_M", "short_name": "MDM_LFB_PROD_M"}, {"on": "RD.LOT_ID = MD.LOT_ID", "full_path": "LAKE_CATALOG.MDM.MEASUREMENT_DATA", "short_name": "MEASUREMENT_DATA"}],
+            "tables": [{"full_path": "STATS_DATA", "short_name": "STATS_DATA"}, {"full_path": "LAKE_CATALOG.MDM.MDM_LFB_PROD_M", "short_name": "MDM_LFB_PROD_M"}, {"full_path": "LAKE_CATALOG.MDM.ALARM_HIST", "short_name": "ALARM_HIST"}, {"full_path": "LAKE_CATALOG.MDM.LOT_HIST", "short_name": "LOT_HIST"}, {"full_path": "RECENT_LOTS", "short_name": "RECENT_LOTS"}, {"full_path": "LAKE_CATALOG.MDM.MEASUREMENT_DATA", "short_name": "MEASUREMENT_DATA"}],
+            "alias_map": {"A": "STATS_DATA", "B": "LAKE_CATALOG.MDM.MDM_LFB_PROD_M", "LH": "LAKE_CATALOG.MDM.LOT_HIST", "MD": "LAKE_CATALOG.MDM.MEASUREMENT_DATA", "RD": "RECENT_LOTS"},
+            "interests": ["LH.LOT_ID", "RD.STATION_ID", "A.AVG_VALUE", "MD.LOT_ID", "LH.STATION_ID", "B.PROD_CODE", "LH.PROD_CODE", "MD.MEASURE_ID", "A.STATION_ID", "LH.CREATE_DT", "A.PROD_CODE", "MD.VALUE", "RD.PROD_CODE", "RD.LOT_ID", "B.PROD_NAME"],
+            "hotFilters": ["A.MEASURE_CNT gt 10", "PROD_CODE eq A.PROD_CODE", "LH.CREATE_DT >= :START_DATE and LH.STATUS IN ('COMPLETED', 'SHIPPED')", "LH.CREATE_DT gte :start_date", "MD.VALUE is NULL"],
+            "aggregations": ["MD.VALUE", "RD.PROD_CODE", "RD.STATION_ID", "A.AVG_VALUE"]
+        },
+        # 2. 기본 조인 (LH <-> MD)
+        {
+            "joins": [{"on": "LH.LOT_ID = MD.LOT_ID", "full_path": "LAKE_CATALOG.MDM.MEASUREMENT_DATA", "short_name": "MEASUREMENT_DATA"}],
+            "tables": [{"full_path": "LAKE_CATALOG.MDM.LOT_HIST", "short_name": "LOT_HIST"}, {"full_path": "LAKE_CATALOG.MDM.MEASUREMENT_DATA", "short_name": "MEASUREMENT_DATA"}],
+            "alias_map": {"LH": "LAKE_CATALOG.MDM.LOT_HIST", "MD": "LAKE_CATALOG.MDM.MEASUREMENT_DATA"},
+            "interests": ["LH.LOT_ID", "MD.LOT_ID"], "hotFilters": [], "aggregations": []
+        },
+        # 3. 단일 테이블 조회 (Filter 테스트)
+        {
+            "joins": [], "tables": [{"full_path": "LAKE_CATALOG.MDM.LOT_HIST", "short_name": "LOT_HIST"}],
+            "alias_map": {}, "interests": [], "hotFilters": ["LOT_ID eq 'L12345'"], "aggregations": []
+        },
+        # 4. 마스터 데이터 조인 (A <-> B)
+        {
+            "joins": [{"on": "A.PROD_ID = B.PROD_ID", "full_path": "LAKE_CATALOG.MDM.MDM_LFB_PRODFLOW_W", "short_name": "MDM_LFB_PRODFLOW_W"}],
+            "tables": [{"full_path": "LAKE_CATALOG.MDM.MDM_LFB_PROD_M", "short_name": "MDM_LFB_PROD_M"}, {"full_path": "LAKE_CATALOG.MDM.MDM_LFB_PRODFLOW_W", "short_name": "MDM_LFB_PRODFLOW_W"}],
+            "alias_map": {"A": "LAKE_CATALOG.MDM.MDM_LFB_PROD_M", "B": "LAKE_CATALOG.MDM.MDM_LFB_PRODFLOW_W"},
+            "interests": ["B.PROD_ID", "A.PROD_ID"], "hotFilters": [], "aggregations": []
+        },
+        # 5. 복합 조건절 테스트
+        {
+            "joins": [], "tables": [{"full_path": "LAKE_CATALOG.MDM.LOT_HIST", "short_name": "LOT_HIST"}],
+            "alias_map": {}, "interests": [], "hotFilters": ["CREATE_DT BETWEEN :START_DT AND :END_DT or STATUS IS NULL", "STATUS is NULL"], "aggregations": []
+        },
+        # 6. WITH절 (CTE) 가상 테이블 테스트
+        {
+            "joins": [], "tables": [{"full_path": "TEMP_VIEW", "short_name": "TEMP_VIEW"}, {"full_path": "LAKE_CATALOG.MDM.LOT_HIST", "short_name": "LOT_HIST"}],
+            "alias_map": {}, "interests": ["LOT_ID"], "hotFilters": [], "aggregations": []
+        },
+        # 7. UNION ALL (다중 테이블 추출)
+        {
+            "joins": [], "tables": [{"full_path": "LAKE_CATALOG.MDM.MDM_LFB_PROD_M", "short_name": "MDM_LFB_PROD_M"}, {"full_path": "LAKE_CATALOG.MDM.MDM_LFB_PRODFLOW_W", "short_name": "MDM_LFB_PRODFLOW_W"}],
+            "alias_map": {}, "interests": ["PROD_ID"], "hotFilters": [], "aggregations": []
+        },
+        # 8. 서브쿼리 내 필터 테스트
+        {
+            "joins": [], "tables": [{"full_path": "LAKE_CATALOG.MDM.MEASUREMENT_DATA", "short_name": "MEASUREMENT_DATA"}],
+            "alias_map": {}, "interests": ["VALUE", "LOT_ID"], "hotFilters": ["A.VALUE gt 10"], "aggregations": []
+        },
+        # 9. 사용자 정의 함수/주석 포함 쿼리
+        {
+            "joins": [], "tables": [{"full_path": "LAKE_CATALOG.MDM.LOT_HIST", "short_name": "LOT_HIST"}],
+            "alias_map": {}, "interests": ["LOT_ID"], "hotFilters": ["STATUS eq 'A'"], "aggregations": []
+        },
+        # 10. 복합 UNION ALL 마스터 정보
+        {
+            "joins": [], "tables": [{"full_path": "LAKE_CATALOG.MDM.MDM_LFB_PROD_M", "short_name": "MDM_LFB_PROD_M"}, {"full_path": "LAKE_CATALOG.MDM.MDM_LFB_PRODFLOW_W", "short_name": "MDM_LFB_PRODFLOW_W"}],
+            "alias_map": {}, "interests": ["PROD_ID", "FLOW_NAME", "PROD_NAME"], "hotFilters": ["STATUS eq 'A'", "USE_YN eq 'Y'"], "aggregations": []
+        }
+    ]
+    run_parsed_data_test(parsed_sample_data)
