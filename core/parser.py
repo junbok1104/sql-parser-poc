@@ -139,3 +139,4 @@ class SQLParser:
             if alias:
                 alias_map[alias] = table_full_path
         return alias_map
+

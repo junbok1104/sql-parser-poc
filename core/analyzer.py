@@ -11,11 +11,31 @@ class SQLAnalyzer:
         pass
 
     def fetch_parsed_data(self):
-        """DB에서 파싱된 JSON 데이터를 긁어옵니다."""
+        """JSON 메타데이터와 세션 정보를 함께 가져옵니다."""
         with engine.connect() as conn:
-            query = text("SELECT parsed_meta FROM lake_public.sql_query_status WHERE status = 'PARSED'")
+            # parsed_meta뿐만 아니라 세션 처리에 필요한 컬럼들을 함께 셀렉트
+            query = text("""
+                         SELECT
+                             query_id,
+                             user_id,
+                             session_id,
+                             parsed_meta,
+                             created_at
+                         FROM lake_public.sql_query_status
+                         WHERE status = 'PARSED'
+                         """)
             result = conn.execute(query)
-            return [row[0] for row in result]
+
+            meta_list = []
+            for row in result:
+                # parsed_meta(딕셔너리)에 세션 정보를 합쳐줍니다.
+                meta = row.parsed_meta.copy() if row.parsed_meta else {}
+                meta['session_id'] = row.session_id
+                meta['user_id'] = row.user_id
+                meta['created_at'] = row.created_at
+                meta_list.append(meta)
+
+            return meta_list
 
     def analyze_relationships(self, meta_list):
         """테이블 간 JOIN 빈도를 분석합니다. (SQL 3.1)"""
@@ -68,6 +88,33 @@ class SQLAnalyzer:
             if clean and not clean.isnumeric(): # 숫자가 아닌 첫 번째 단어를 키로 간주
                 return clean
         return ""
+
+    def sync_session_status(self, session_id, user_id, query_count, start_time, end_time):
+        """세션 상태 동기화: INSERT 시에는 SESSIONIZED, UPDATE(중복) 시에는 ANALYZED로 강제 전이"""
+        upsert_query = text("""
+                            INSERT INTO lake_public.sql_session_status
+                            (session_id, user_id, status, query_count, start_time, end_time, created_at, updated_at)
+                            VALUES
+                                (:session_id, :user_id, 'SESSIONIZED', :query_count, :start_time, :end_time, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                ON CONFLICT (session_id) 
+            DO UPDATE SET
+                                -- 중복 발생 시(즉, 분석 단계 진입 시) 상태를 ANALYZED로 명시적 변경
+                                status = 'ANALYZED',
+                                               query_count = EXCLUDED.query_count,
+                                               start_time = LEAST(sql_session_status.start_time, EXCLUDED.start_time),
+                                               end_time = GREATEST(sql_session_status.end_time, EXCLUDED.end_time),
+                                               updated_at = CURRENT_TIMESTAMP
+                            """)
+
+        with engine.connect() as conn:
+            conn.execute(upsert_query, {
+                "session_id": session_id,
+                "user_id": user_id,
+                "query_count": query_count,
+                "start_time": start_time,
+                "end_time": end_time
+            })
+            conn.commit()
 
     def generate_graph_data(self, meta_list):
         nodes = {}
